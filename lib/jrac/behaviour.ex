@@ -8,6 +8,8 @@ defmodule Jrac.Behaviour do
   @callback build_uri(String.t()) :: String.t() | nil
   @callback build_uri(String.t(), integer | map) :: String.t() | nil
 
+  require Logger
+
   defmacro __using__(base_url: base_url, headers: headers) do
     quote do
       @behaviour Jrac.Behaviour
@@ -22,16 +24,16 @@ defmodule Jrac.Behaviour do
       Perform a GET request to fetch a single object
 
       ```
-      do_get_single("users", 1)
+      do_get_single("users", "1")
       ```
 
       """
       @spec do_get_single(String.t(), integer) :: {:ok, any()} | {:error, any()}
-      def do_get_single(endpoint, id) when is_binary(endpoint) and is_integer(id) do
+      def do_get_single(endpoint, id) when is_binary(endpoint) and is_binary(id) do
         with {:ok, response} <- HTTPoison.get(build_uri(endpoint, id), unquote(headers)),
              {:status_code, @get_success_code} <- {:status_code, response.status_code},
              {:ok, decoded} <- Poison.decode(response.body) do
-          {:ok, decoded["data"]}
+          {:ok, decoded}
         else
           error -> {:error, error}
         end
@@ -44,8 +46,11 @@ defmodule Jrac.Behaviour do
       @doc """
       Perform a GET request to fetch a page of objects
 
+      Second parameter is a pagination vector in form of arbitrary map.
+      %{"page" => "2"} will be transformed into &page=2 in URI
+
       ```
-      do_get_page("users", 2)
+      do_get_page("users", %{"page" => "2"})
       ```
 
       """
@@ -53,11 +58,11 @@ defmodule Jrac.Behaviour do
 
       def do_get_page(
             endpoint,
-            page
+            %{} = page
           )
-          when is_binary(endpoint) and is_integer(page) do
+          when is_binary(endpoint) do
         with {:ok, response} <-
-               HTTPoison.get(build_uri(endpoint, %{"page" => to_string(page)}), unquote(headers)),
+               HTTPoison.get(build_uri(endpoint, page), unquote(headers)),
              {:status_code, @get_success_code} <- {:status_code, response.status_code},
              {:ok, decoded} <- Poison.decode(response.body) do
           {:ok, decoded}
@@ -105,7 +110,7 @@ defmodule Jrac.Behaviour do
       """
       @spec do_patch(String.t(), integer, map) :: {:ok, any()} | {:error, any()}
       def do_patch(endpoint, id, kv_map)
-          when is_binary(endpoint) and is_map(kv_map) and is_integer(id) do
+          when is_binary(endpoint) and is_map(kv_map) and is_binary(id) do
         with {:ok, encoded} <- Poison.encode(kv_map),
              {:ok, response} <-
                HTTPoison.patch(build_uri(endpoint, id), encoded, unquote(headers)),
@@ -131,7 +136,7 @@ defmodule Jrac.Behaviour do
       """
       @spec do_put(String.t(), integer, map) :: {:ok, any()} | {:error, any()}
       def do_put(endpoint, id, data_struct)
-          when is_binary(endpoint) and is_map(data_struct) and is_integer(id) do
+          when is_binary(endpoint) and is_map(data_struct) and is_binary(id) do
         with {:ok, encoded} <- Poison.encode(data_struct),
              {:ok, response} <-
                HTTPoison.patch(build_uri(endpoint, id), encoded, unquote(headers)),
@@ -156,7 +161,7 @@ defmodule Jrac.Behaviour do
 
       """
       @spec do_delete(String.t(), integer) :: {:ok, any()} | {:error, any()}
-      def do_delete(endpoint, id) when is_binary(endpoint) and is_integer(id) do
+      def do_delete(endpoint, id) when is_binary(endpoint) and is_binary(id) do
         with {:ok, response} <- HTTPoison.delete(build_uri(endpoint, id), unquote(headers)),
              {:status_code, @delete_success_code} <- {:status_code, response.status_code} do
           {:ok}
@@ -197,7 +202,7 @@ defmodule Jrac.Behaviour do
       build a URI for a call with parameters
 
       ```
-      build_uri("users", 1)
+      build_uri("users", "1")
       "https://reqres.in/api/users/1"
       build_uri("users", %{"page"=>"2"})
       "https://reqres.in/api/users/?page=2"
@@ -205,7 +210,7 @@ defmodule Jrac.Behaviour do
 
       """
       @spec build_uri(String.t(), integer) :: String.t() | nil
-      def build_uri(endpoint, id) when is_binary(endpoint) and is_integer(id) do
+      def build_uri(endpoint, id) when is_binary(endpoint) and is_binary(id) do
         unquote(base_url) <> "/" <> endpoint <> "/" <> to_string(id)
       end
 

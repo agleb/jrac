@@ -4,7 +4,7 @@ defmodule Jrac.MixProject do
   def project do
     [
       app: :jrac,
-      version: "0.1.0",
+      version: "0.2.0",
       elixir: "~> 1.7",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -25,7 +25,7 @@ defmodule Jrac.MixProject do
 
   defp deps do
     [
-      {:httpoison, "~> 1.4"},
+      {:httpoison, "~> 1.6"},
       {:poison, "~> 3.1"},
       {:ex_doc, "~> 0.14", only: :dev}
     ]

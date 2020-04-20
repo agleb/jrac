@@ -6,6 +6,8 @@ Jrac - JSON RESTful API client.
 
 Jrac is a boilerplate for writing RESTful API consuming apps.
 
+Methods: GET, POST, PUT, PATCH, DELETE
+
 Note that Jrac does not support JSON API spec.
 
 Jrac was made to consume simple RESTful APIs with JSON-encoded output.
