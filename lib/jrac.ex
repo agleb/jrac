@@ -1,5 +1,4 @@
 defmodule Jrac do
-  use Jrac.Behaviour, base_url: "https://reqres.in/api", headers: [{"Accept", "application/json"}]
 
   @moduledoc """
   Jrac - JSON RESTful API client.
@@ -10,6 +9,7 @@ defmodule Jrac do
 
   Jrac was made to consume simple RESTful APIs with JSON-encoded output.
 
-  """
+  use Jrac.Behaviour, app_name: :jrac, base_url: "https://reqres.in/api", headers: [{"Accept", "application/json"}]
 
+  """
 end

@@ -5,12 +5,10 @@ defmodule Jrac.Behaviour do
   @callback do_patch(String.t(), integer, map) :: {:ok, any()} | {:error, any()}
   @callback do_put(String.t(), integer, map) :: {:ok, any()} | {:error, any()}
   @callback do_delete(String.t(), integer) :: {:ok, any()} | {:error, any()}
-  @callback build_uri(String.t()) :: String.t() | nil
-  @callback build_uri(String.t(), integer | map) :: String.t() | nil
+  @callback build_url(String.t()) :: String.t() | nil
+  @callback build_url(String.t(), any()) :: String.t() | nil
 
-  require Logger
-
-  defmacro __using__(base_url: base_url, headers: headers) do
+  defmacro __using__(app_name: app_name, base_url_key_name: base_url_key_name, headers: headers) do
     quote do
       @behaviour Jrac.Behaviour
 
@@ -28,9 +26,8 @@ defmodule Jrac.Behaviour do
       ```
 
       """
-      @spec do_get_single(String.t(), integer) :: {:ok, any()} | {:error, any()}
-      def do_get_single(endpoint, id) when is_binary(endpoint) and is_binary(id) do
-        with {:ok, response} <- HTTPoison.get(build_uri(endpoint, id), unquote(headers)),
+      def do_get_single(endpoint, id) when is_binary(endpoint) do
+        with {:ok, response} <- HTTPoison.get(build_url(endpoint, id), unquote(headers)),
              {:status_code, @get_success_code} <- {:status_code, response.status_code},
              {:ok, decoded} <- Poison.decode(response.body) do
           {:ok, decoded}
@@ -47,7 +44,7 @@ defmodule Jrac.Behaviour do
       Perform a GET request to fetch a page of objects
 
       Second parameter is a pagination vector in form of arbitrary map.
-      %{"page" => "2"} will be transformed into &page=2 in URI
+      %{"page" => "2"} will be transformed into &page=2 in URL
 
       ```
       do_get_page("users", %{"page" => "2"})
@@ -62,7 +59,7 @@ defmodule Jrac.Behaviour do
           )
           when is_binary(endpoint) do
         with {:ok, response} <-
-               HTTPoison.get(build_uri(endpoint, page), unquote(headers)),
+               HTTPoison.get(build_url(endpoint, page), unquote(headers)),
              {:status_code, @get_success_code} <- {:status_code, response.status_code},
              {:ok, decoded} <- Poison.decode(response.body) do
           {:ok, decoded}
@@ -87,7 +84,7 @@ defmodule Jrac.Behaviour do
       def do_post(endpoint, data_struct)
           when is_binary(endpoint) and is_map(data_struct) do
         with {:ok, encoded} <- Poison.encode(data_struct),
-             {:ok, response} <- HTTPoison.post(build_uri(endpoint), encoded, unquote(headers)),
+             {:ok, response} <- HTTPoison.post(build_url(endpoint), encoded, unquote(headers)),
              {:status_code, @post_success_code} <- {:status_code, response.status_code},
              {:ok, decoded} <- Poison.decode(response.body) do
           {:ok, decoded}
@@ -113,7 +110,7 @@ defmodule Jrac.Behaviour do
           when is_binary(endpoint) and is_map(kv_map) and is_binary(id) do
         with {:ok, encoded} <- Poison.encode(kv_map),
              {:ok, response} <-
-               HTTPoison.patch(build_uri(endpoint, id), encoded, unquote(headers)),
+               HTTPoison.patch(build_url(endpoint, id), encoded, unquote(headers)),
              {:status_code, @patch_success_code} <- {:status_code, response.status_code},
              {:ok, decoded} <- Poison.decode(response.body) do
           {:ok, decoded}
@@ -139,7 +136,7 @@ defmodule Jrac.Behaviour do
           when is_binary(endpoint) and is_map(data_struct) and is_binary(id) do
         with {:ok, encoded} <- Poison.encode(data_struct),
              {:ok, response} <-
-               HTTPoison.patch(build_uri(endpoint, id), encoded, unquote(headers)),
+               HTTPoison.patch(build_url(endpoint, id), encoded, unquote(headers)),
              {:status_code, @put_success_code} <- {:status_code, response.status_code},
              {:ok, decoded} <- Poison.decode(response.body) do
           {:ok, decoded}
@@ -162,7 +159,7 @@ defmodule Jrac.Behaviour do
       """
       @spec do_delete(String.t(), integer) :: {:ok, any()} | {:error, any()}
       def do_delete(endpoint, id) when is_binary(endpoint) and is_binary(id) do
-        with {:ok, response} <- HTTPoison.delete(build_uri(endpoint, id), unquote(headers)),
+        with {:ok, response} <- HTTPoison.delete(build_url(endpoint, id), unquote(headers)),
              {:status_code, @delete_success_code} <- {:status_code, response.status_code} do
           {:ok}
         else
@@ -175,46 +172,48 @@ defmodule Jrac.Behaviour do
       )
 
       @doc """
-      Build a URI for a simple call
+      Build a URL for a simple call
 
       ```
-      build_uri("users")
+      build_url("users")
       ```
 
       """
-      @spec build_uri(String.t()) :: String.t() | nil
-      def build_uri(endpoint) when is_binary(endpoint) do
-        unquote(base_url) <> "/" <> endpoint
+      def build_url(endpoint) when is_binary(endpoint) do
+        Application.get_env(unquote(app_name), unquote(base_url_key_name)) <> "/" <> endpoint
       end
 
-      @spec build_uri(String.t(), map) :: String.t() | nil
-      def build_uri(endpoint, params) when is_binary(endpoint) and is_map(params) do
-        uri_params =
-          params
-          |> Enum.reduce([], fn {k, v}, acc -> acc ++ [k <> "=" <> v] end)
-          |> Enum.join("&")
-
-        unquote(base_url) <> "/" <> endpoint <> "?" <> uri_params
-      end
+      def build_url(_endpoint), do: nil
 
       @doc """
-      Build a URI for a call with an integer id or
-      build a URI for a call with parameters
 
-      ```
-      build_uri("users", "1")
-      "https://reqres.in/api/users/1"
-      build_uri("users", %{"page"=>"2"})
-      "https://reqres.in/api/users/?page=2"
-      ```
+            Build a URL for a call with an integer id or
+            build a URL for a call with parameters
+
+            ```
+                  build_url("users", "1")
+                  "https://reqres.in/api/users/1"
+                  build_url("users", %{"page"=>"2"})
+            ```
 
       """
-      @spec build_uri(String.t(), integer) :: String.t() | nil
-      def build_uri(endpoint, id) when is_binary(endpoint) and is_binary(id) do
-        unquote(base_url) <> "/" <> endpoint <> "/" <> to_string(id)
+
+      def build_url(endpoint, params) when is_binary(endpoint) and is_map(params) do
+        url_params =
+          params
+          |> Enum.reduce([], fn {k, v}, acc -> acc ++ [k <> "=" <> to_string(v)] end)
+          |> Enum.join("&")
+
+        Application.get_env(unquote(app_name), unquote(base_url_key_name)) <>
+          "/" <> endpoint <> "?" <> url_params
       end
 
-      def build_uri(_endpoint, _id), do: nil
+      def build_url(endpoint, id) when is_binary(endpoint) do
+        Application.get_env(unquote(app_name), unquote(base_url_key_name)) <>
+          "/" <> endpoint <> "/" <> to_string(id)
+      end
+
+      def build_url(_endpoint, _id), do: nil
       defoverridable(Jrac.Behaviour)
     end
   end
