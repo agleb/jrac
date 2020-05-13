@@ -27,12 +27,24 @@ def deps do
 end
 ```
 
+Add API base url to config
+
+```elixir
+
+config :jrac, base_url_key: "https://reqres.in/api"
+
+
+```
+
 ## Usage
 
 ```elixir
 
 # Set the URL for your API, set headers to be sent with each request
-use Jrac.Behaviour, base_url: "https://reqres.in/api", headers: [{"Accept", "application/json"}]
+  use Jrac.Behaviour,
+    app_name: :jrac,
+    base_url_key_name: :base_url_key,
+    headers: [{"Accept", "application/json"}]
 
 case do_get_single("users", 4) do
   {:ok, user} -> user
