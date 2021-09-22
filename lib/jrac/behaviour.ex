@@ -41,7 +41,8 @@ defmodule Jrac.Behaviour do
       )
 
       def do_get_single!(endpoint, id) when is_binary(endpoint) do
-        with {:ok, response} <- HTTPoison.get(build_url(endpoint, id), unquote(headers)),
+        with {:ok, response} <-
+               HTTPoison.get(build_url(endpoint, id), unquote(headers)),
              {:status_code, @get_success_code} <- {:status_code, response.status_code},
              {:ok, decoded} <- Poison.decode(response.body) do
           {:ok, decoded}

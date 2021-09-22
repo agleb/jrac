@@ -30,6 +30,14 @@ defmodule JracTest do
             }} = JracTest.do_get_single("users", "4")
   end
 
+  test "do_get_single! to fail" do
+    assert_raise Jrac.Error, fn -> JracTest.do_get_single!("users", "23") |> IO.inspect() end
+    current = Application.get_env(:jrac, :base_url_key)
+    Application.put_env(:jrac, :base_url_key, "nnn.nn")
+    assert_raise Jrac.Error, fn -> JracTest.do_get_single!("users", "4") |> IO.inspect() end
+    Application.put_env(:jrac, :base_url_key, current)
+  end
+
   test "do_get_page" do
     assert {:ok,
             %{
