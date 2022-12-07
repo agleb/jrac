@@ -25,8 +25,8 @@ defmodule Jrac.MixProject do
 
   defp deps do
     [
-      {:httpoison, "~> 1.6"},
-      {:poison, "~> 3.1"},
+      {:httpoison, "~> 1.8"},
+      {:poison, "~> 5.0"},
       {:ex_doc, "~> 0.14", only: :dev}
     ]
   end
@@ -44,5 +44,4 @@ defmodule Jrac.MixProject do
   defp description() do
     "JSON RESTful API client"
   end
-
 end
